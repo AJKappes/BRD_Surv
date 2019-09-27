@@ -57,7 +57,6 @@ for (i in 1:pen_size) {
   
   u <- runif(1)
   m_vec[i] <- u*head_pen
-  #m_vec[i] <- 0.3*head_pen
 
 }
 
@@ -107,7 +106,7 @@ theta_dens <- data.table(theta = theta_draw(Nden)[['draw']])
 #   geom_density(alpha = 0.3, size = 0.2, color = 'coral', fill = 'coral')
 
 # brd sim
-Nsim <- 1000
+Nsim <- 500
 theta_vec <- c()
 brd_sim <- list()
 for (i in 1:Nsim) {
@@ -185,7 +184,6 @@ for (i in 1:length(brd_sim25perc)) {
 
 avg_cost_25perc <- mean(cost_vec_25perc)
 avg_cost_75perc <- mean(cost_vec_75perc)
-brd_impact <- avg_cost_25perc - avg_cost_75perc
 
 #### epi transition plot ####
 
