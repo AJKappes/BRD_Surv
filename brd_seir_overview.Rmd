@@ -1,0 +1,95 @@
+---
+output:
+  pdf_document:
+    fig_crop: false
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE,
+                      fig.align = 'center', fig.height = 3.75, fig.width = 5)
+
+knitr::knit_hooks$set(inline = function(x) {
+  
+  prettyNum(round(x, 2), big.mark=',')
+
+})
+
+source('brd_seir_sim.R')
+source('brd_impact_sim.R')
+```
+
+
+\begin{center}
+\textbf{Genetic Marker Selection Implications for Bovine Respiratory Disease SEIR Modeling in a Bayesian Environment}
+\end{center}
+
+\begin{center}
+\textit{Model overview and initial findings}
+\end{center}
+
+Evaluation of disease transmission through members of a population has been widely conducted using the Susceptible, Exposed, Infectious, and Recovered (SEIR) epidemiological model. The differential equations used to specify this model create the set
+$$
+\begin{aligned}
+\frac{dS}{dt} &= -\beta SI \\[5pt]
+\frac{dE}{dt} &= \beta SI - \sigma E \\[5pt]
+\frac{dI}{dt} &= \sigma E - \gamma I \\[5pt]
+\frac{dR}{dt} &= \gamma I
+\end{aligned}
+$$
+where
+\begin{itemize}
+\item[] $\beta$ represents the rate of disease spread from susceptible individuals to exposed individuals
+\item[] $\sigma$ represents disease incubation rate, where the average incubation duration equals $1/\sigma$
+\item[] $\gamma$ represents the recovery rate, where $\gamma$ equals $1/D$ for the average duration of infection, $D$
+\end{itemize}
+
+The above model characterizes a basic SEIR model with no births or deaths in the population. We extend the above model to account for genetic marker selection impact on Bovine Respiratory Disease (BRD) transmission in a representative feedlot. We also allow for bovine mortality from BRD. The extended SEIR model is then specified as
+$$
+\begin{aligned}
+\frac{dS}{dt} &= -\beta SI \\[5pt]
+\frac{dE}{dt} &= \beta SI - \sigma E -\theta E \\[5pt]
+\frac{dI}{dt} &= \sigma E - \gamma I - \delta I \\[5pt]
+\frac{dR}{dt} &= \gamma I + \theta E
+\end{aligned}
+$$
+where the new parameter $\theta$ represents an associated BRD resistance rate for calves produced through genetic marker selection, and $\delta$ represents the mortality rate. The intuition surrounding this extension is that because of the associated BRD resistance from genetic marker selection, calves exposed to respiratory disease pathogens are less susceptible to infection and can then move from the exposed population directly to the recovered population without becoming infectious. Calves not produced through genetic marker selection are assumed to be more susceptible to BRD and are more likely to move from the exposed population to the infectious population, where the likelihood of mortality is greater.
+
+For the simulation, we model the uncertainty surrounding the BRD resistance rate from genetic marker selection through the parameter $\theta$, treating it as a random variable that can take on values between 0 and 1. Because BRD resistance is conditional on genetic marker selection, holding all else constant, we specify the conditional distribution $\theta \rvert m$ where $m$ denotes a genetic marker selection random variable, where it is uncertain if a calf is produced using genetic marker selection at the cow-calf operation level. We assume the decision to produce using genetic marker selection is influenced by the associated BRD resistance rate $\theta$. Bayesian methods allow analysis on $\theta$ through its simulated conditional, or posterior distribution $\theta\rvert m$.
+
+We assume that $m$ follows a binomial distribution, characterizing the number of successes $m$ in $n$ trials where success occurs when a calf is produced using genetic marker selection. We allow flexibility in the prior distribution of $\theta$ over its (0, 1) support by specifying it as following a beta distribution. We use pseudo-observations to characterize the hyperparameters $a$ and $b$, which informs the shape of the beta probability density function. Letting $f(m; n, \theta)$ represent the likelihood and $\pi(\theta)$ represent the prior, we arrive at the posterior distribution
+$$
+\begin{aligned}
+\theta\rvert m &\propto \pi(\theta)f(x; n, \theta) \\[5pt]
+&\propto \theta^{a-1}(1-\theta)^{b-1}\theta^{\sum_{j=1}^Jm_j}(1-\theta)^{\sum_{j=1}^J(n-m_j)} \\[5pt]
+&\propto \theta^{\sum_{j=1}^Jm_j+a-1}(1-\theta)^{\sum_{j=1}^J(n-m_j)+b-1} \\[5pt]
+\theta \rvert m &\sim \text{Beta}(\textstyle\sum_{j=1}^Jm_j+a, \sum_{j=1}^J(n-m_j)+b)
+\end{aligned}
+$$
+Using the SEIR model we simulate BRD transmission in one feedlot pen with 150 head. We assume that this pen is representative of all other pens in the feedlot. SEIR model parameter characterization is informed by Snowder, Vleck, Cundiff et al. (2006) and Fulton, Blood, Panciera et al. (2009). The 0.17 feedlot BRD incidence rate is used in the expected transmission rate $\beta$ calculation. The incubation rate $\sigma$ is characterized as $1-\theta$ due to calves not moving directly to the recovered population through $\theta$, moving to the infectious population through $1-\theta$. Mortality rate $\delta$ is characterized as the average of overall feedlot mortality percent (includes culling and death) and overall feedlot death percent, which results in a value of 0.0245. Conditions for calves with BRD have been found to become fatal at an average duration of infection of 61.81 days. It is assumed for this study that calves surviving past this point recover. The recovery rate $\gamma$ then becomes 0.0612.
+
+To simulate the associated BRD resistance rate $\theta$ we first characterize $\sum_{j=1}^Jm_j$, for the number $m$ of genetic marker selection calves, by randomly drawing a uniform random variable over the support (0, 1) to represent a random proportion and using the product of that proportion and the number of head in pen $j$ to arrive at $m_j$. The hyperparameters $a$ and $b$ can also be thought of as pseudo-observations in terms of the number of successes (i.e. the number of genetic marker selection calves) and failures (the number of non-genetic marker selection calves). The mean of all $m_j$ values, $\bar{m}$ is used for $a$ and $n-\bar{m}$ for a population of size $n$ is used for $b$.
+
+We simulate the $\theta\rvert m$ density by randomly drawing 1000 observations from its posterior distribution above. For each of these observations we compute the SEIR model and evaluate model outcomes over all 1000 $\theta\rvert m$ values. We separate all $\theta \rvert m$ values into those below the $25^{th}$ percentile and those above the $75^{th}$ percentile, along with their corresponding SEIR model infectious and recovered population proportion outcomes. Using a BRD treatment cost of \$13.9 per head and averaging it over the length of days on feed $t$ for a total of 182 days, we compute a per day per head treatment cost value. The product of this per head treatment cost and the number of infectious calves per day provides a total BRD treatment cost per day for all infectious cattle. Aggregation of all per day costs provides a total feeding cycle cost. We also compute the profit margin loss due to calf mortality using our previous study's profit margin value of \$31.65 for healthy cattle. The number of mortality cases is computed as the difference between the beginning population end the ending recovered population. Total profit margin loss due to mortality is then computed as the product of profit margin and the total number of mortality cases.
+
+Averaging all cost values in the $25^{th}\ \theta\rvert m$ percentile and also in the $75^{th}\ \theta\rvert m$ percentile and then differencing these averages provides the additional BRD cost per pen for calves not produced using genetic marker selection. It can also be interpreted as a BRD incidence cost savings from genetic marker selection.
+
+The cost savings is \$`r avg_cost_25perc - avg_cost_75perc` per pen. Based on 2018 USDA Census data, feedlots with greater than 1000 head capacity averaged 53 pens while providing approximately 85% of U.S. beef (but comprising a small percentage of total U.S. feedlots). The genetic marker selection BRD cost savings for these feedlots then becomes \$`r round((avg_cost_25perc - avg_cost_75perc)*53, 3)` over the duration of full pen turnover.
+
+For visual reference, BRD transmission plots from the SEIR models are provided below for associated BRD resistance rates in the $25^{th}$ and the $75^{th}$ percentile. We observe a greater difference between the recovered population and the infectious population for $\theta\rvert m$ values in the $75^{th}$ percentile, where larger associated resistance values correspond to genetic marker selection calves.
+
+```{r}
+plot_25th
+```
+
+```{r}
+plot_75th
+```
+
+```{r}
+impact_conv_plot
+```
+
+Shown in the convergense plot above, the expected BRD outbreak impact is \$`r mean(impact_dt$impact)`, with a 95\% confidence interval of \$(`r impact_lower[nrow(impact_dt)]`, `r impact_upper[nrow(impact_dt)]`).
+
+
+
