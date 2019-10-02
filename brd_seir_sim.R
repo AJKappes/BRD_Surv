@@ -51,28 +51,32 @@ init_vals <- c(S = s_init, E = e_init, I = i_init, R = r_init) / Npop
 
 ##### Model specification #####
 
-# initialize proportion of genetic marker selected in each pen
-m_vec <- c()
-for (i in 1:pen_size) {
+m_draw <- function() {
   
-  u <- runif(1)
-  m_vec[i] <- u*head_pen
-
+  m_vec <- c()
+  for (i in 1:pen_size) {
+    
+    m_vec[i] <- runif(1, 0, head_pen)
+    
+  }
+  
+  M <- sum(m_vec)
+  return(list(M = sum(m_vec), draws = m_vec))
+  
 }
-
-# equate summation of independent genetic marker selection population for posterior
-M <- sum(m_vec)
 
 theta_draw <- function(s) {
 
   # posterior hyperparameters from pseudo obs, set up and draw
   # psuedo (a) avg number of successes, implied genetic marker selection calves
   # psuedo (b) number of failures, implied non-genetic marker selection calves
-  a_param <- M + mean(m_vec)
-  b_param <- sum(Npop - m_vec) + Npop - mean(m_vec)
+  
+  m_rv <- m_draw()
+  a_param <- m_rv[['M']] + mean(m_rv[['draws']])
+  b_param <- sum(Npop - m_rv[['draws']]) + Npop - mean(m_rv[['draws']])
   theta_vec <- rbeta(s, a_param, b_param)
   
-  return(list(draw = theta_vec, a = a_param, b = b_param))
+  return(list(draws = theta_vec, a = a_param, b = b_param, m = m_rv[['draws']]))
   
 }
 
@@ -99,19 +103,17 @@ brd_seir <- function(time, state, parameters) {
 
 ##### simulation #####
 
-# posterior evaluation
-Nden <- 1000
-theta_dens <- data.table(theta = theta_draw(Nden)[['draw']])
-# ggplot(theta_dens, aes(theta)) +
-#   geom_density(alpha = 0.3, size = 0.2, color = 'coral', fill = 'coral')
-
 # brd sim
-Nsim <- 500
+Nsim <- 1000
 theta_vec <- c()
+# m_prop_vec <- c()
 brd_sim <- list()
 for (i in 1:Nsim) {
   
-  theta <- theta_draw(1)[['draw']]
+  # post_draw <- theta_draw(1)
+  # m_prop_vec[i] <- post_draw[['m']] / Npop
+  # theta <- post_draw[['draws']]
+  theta <- theta_draw(1)[['draws']]
   theta_vec[i] <- theta
   sim <- data.table(ode(init_vals, t, brd_seir, fixed_params))
   brd_sim <- append(brd_sim, list(sim))
@@ -123,6 +125,13 @@ for (i in 1:Nsim) {
   }
   
 }
+
+# posterior evaluation with density plot
+
+# theta_dens <- data.table(theta = theta_vec)
+# 
+# ggplot(theta_dens, aes(theta)) +
+#   geom_density(alpha = 0.3, size = 0.2, color = 'coral', fill = 'coral')
 
 #### feedlost infectious cost impact ####
 
@@ -184,46 +193,58 @@ for (i in 1:length(brd_sim25perc)) {
 
 avg_cost_25perc <- mean(cost_vec_25perc)
 avg_cost_75perc <- mean(cost_vec_75perc)
-
+# impact <- avg_cost_25perc - avg_cost_75perc
+# cat(avg_cost_25perc, '-', avg_cost_75perc, '=', impact)
+ 
 #### epi transition plot ####
 
-# # theta 25th percentile plot
-# theta <- mean(theta_vec[theta_vec <= quantile(theta_vec, c(.25))])
-# sim_25th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
-# 
-# y_25 <- sim_25th[, .(S, E, I, R)]
-# t <- sim_25th[, .(t)]$t
-# plot_25th <- ggplot(sim_25th, aes(t)) +
-#   geom_line(aes(y = y_25$S, colour = 'S')) +
-#   geom_line(aes(y = y_25$E, colour = 'E')) +
-#   geom_line(aes(y = y_25$I, colour = 'I')) +
-#   geom_line(aes(y = y_25$R, colour = 'R')) +
-#   labs(title = 'BRD Transition plot',
-#        subtitle = TeX('$\\bar{\\theta}_{25^{th} percentile}$ Associated BRD Resistance Rate'),
-#        x = TeX('$t$'),
-#        y = TeX('Population Proportion')) +
-#   scale_color_manual(name = '',
-#                      values = c('S' = 'blue', 'E' = 'orange',
-#                                 'I' = 'red', 'R' = 'green'),
-#                      limits = c('S', 'E', 'I', 'R')) +
-#   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
-# 
-# # theta 75th percentil plot
-# theta <- mean(theta_vec[theta_vec >= quantile(theta_vec, c(.75))])
-# sim_75th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
-# 
-# y_75 <- sim_75th[, .(S, E, I, R)]
-# plot_75th <- ggplot(sim_75th, aes(t)) +
-#   geom_line(aes(y = y_75$S, colour = 'S')) +
-#   geom_line(aes(y = y_75$E, colour = 'E')) +
-#   geom_line(aes(y = y_75$I, colour = 'I')) +
-#   geom_line(aes(y = y_75$R, colour = 'R')) +
-#   labs(title = 'BRD Transition plot',
-#        subtitle = TeX('$\\bar{\\theta}_{\\geq 75^{th} percentile}$ Associated BRD Resistance Rate'),
-#        x = TeX('$t$'),
-#        y = TeX('Population Proportion')) +
-#   scale_color_manual(name = '',
-#                      values = c('S' = 'blue', 'E' = 'orange',
-#                                 'I' = 'red', 'R' = 'green'),
-#                      limits = c('S', 'E', 'I', 'R')) +
-#   theme(plot.title = element_text(hjust = 0.5), plot.subtitle = element_text(hjust = 0.5))
+# theta 25th percentile plot
+
+plot_fun <- function(ineq, sim, y) {
+  
+  t <- seq(0, 182, 1)
+  
+  if (ineq == 'leq') {
+
+    sub <- TeX('$\\bar{\\theta}_{25^{th} percentile}$ Associated BRD Resistance Rate')
+    
+  }
+  
+  if (ineq == 'geq') {
+
+    sub <- TeX('$\\bar{\\theta}_{\\geq 75^{th} percentile}$ Associated BRD Resistance Rate')
+    
+  }
+  
+  plot <- ggplot(sim, aes(t)) +
+    geom_line(aes(y = y$S, colour = 'Susceptible')) +
+    geom_line(aes(y = y$E, colour = 'Exposed')) +
+    geom_line(aes(y = y$I, colour = 'Infectious')) +
+    geom_line(aes(y = y$R, colour = 'Recovered')) +
+    ylim(-.05, 1) +
+    labs(title = 'BRD Transition plot',
+         subtitle = sub,
+         x = TeX('$t$'),
+         y = TeX('Population Proportion')) +
+    scale_color_manual(name = '',
+                       values = c('Susceptible' = 'blue', 'Exposed' = 'orange',
+                                  'Infectious' = 'red', 'Recovered' = 'green'),
+                       limits = c('Susceptible', 'Exposed', 'Infectious', 'Recovered')) +
+    theme(plot.title = element_text(family = 'serif', hjust = 0.5),
+          plot.subtitle = element_text(family = 'serif', hjust = 0.5),
+          axis.title = element_text(family = 'serif'),
+          legend.text = element_text(family = 'serif'))
+  
+  return(plot)
+  
+}
+
+theta <- mean(theta_vec[theta_vec <= quantile(theta_vec, c(.25))])
+sim_25th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
+y_25th <- sim_25th[, .(S, E, I, R)]
+plot_25th <- plot_fun('leq', sim_25th, y_25th)
+
+theta <- mean(theta_vec[theta_vec >= quantile(theta_vec, c(.75))])
+sim_75th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
+y_75th <- sim_75th[, .(S, E, I, R)]
+plot_75th <- plot_fun('geq', sim_75th, y_75th)

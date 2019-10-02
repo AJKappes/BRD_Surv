@@ -1,23 +1,21 @@
-Nsim <- 1000
-theta25p_impact <- c()
-theta75p_impact <- c()
-for (i in 1:Nsim) {
-  
-  n_env <- new.env()
-  sys.source('brd_seir_sim.R', n_env)
-  theta25p_impact[i] <- n_env$avg_cost_25perc
-  theta75p_impact[i] <- n_env$avg_cost_75perc
-  cat('Impact simulation', i, 'of', Nsim, 'complete\n')
-  
-}
+# Nsim <- 1000
+# theta25p_impact <- c()
+# theta75p_impact <- c()
+# for (i in 1:Nsim) {
+#   
+#   n_env <- new.env()
+#   sys.source('brd_seir_sim.R', n_env)
+#   theta25p_impact[i] <- n_env$avg_cost_25perc
+#   theta75p_impact[i] <- n_env$avg_cost_75perc
+#   cat('Impact simulation', i, 'of', Nsim, 'complete\n')
+#   
+# }
+# 
+# impact_dt <- data.table(c25 = theta25p_impact,
+#                         c75 = theta75p_impact,
+#                         impact = theta25p_impact - theta75p_impact)
+# fwrite(impact_dt, 'brd_impact.csv')
 
-brd_impact_dt <- data.table(c25 = theta25p_impact,
-                            c75 = theta75p_impact,
-                            impact = theta25p_impact - theta75p_impact)
-fwrite(brd_impact_dt, 'brd_impact.csv')
-
-#### ####
-remove(list = objects())
 library(data.table)
 library(ggplot2)
 library(latex2exp)
@@ -29,7 +27,7 @@ impact_rvs <- rnorm(1000,
                      sqrt((var(impact_dt$c25) + var(impact_dt$c75))/nrow(impact_dt)))
 impact_dist_dt <- data.table(rv = impact_rvs)
 
-ggplot(impact_dist_dt, aes(rv)) +
+impact_dist_plot <- ggplot(impact_dist_dt, aes(rv)) +
   geom_density(alpha = 0.4, size = 0.1, color = '#978B88', fill = '#978B88')
 
 impact_conv_vec <- c()
@@ -51,22 +49,16 @@ conv_dt <- data.table(conv = impact_conv_vec,
                       lower = impact_lower,
                       itr = 1:nrow(impact_dt))
 
-ggplot(conv_dt, aes(itr)) +
+impact_conv_plot <- ggplot(conv_dt, aes(itr)) +
   geom_line(aes(y = conv, colour = 'mean'), alpha = 0.75) +
   geom_line(aes(y = upper, colour = 'upper')) +
   geom_line(aes(y = lower, colour = 'lower')) +
   scale_color_manual(name = '',
                      values = c('mean' = 'black', 'upper' = 'gray', 'lower' = 'gray')) +
   geom_ribbon(aes(ymin = lower, ymax = upper), fill = 'gray', alpha = 0.4) +
-  ylab(TeX('$\\mu$')) +
+  ylab(TeX('Expected BRD Cost Impact')) +
   xlab(TeX('Iteration')) +
   ggtitle(TeX('Expected Cost Impact Convergence')) +
-  theme(plot.title = element_text(hjust = 0.5),
+  theme(plot.title = element_text(family = 'serif', hjust = 0.5),
+        axis.title = element_text(family = 'serif'),
         legend.position = 'none')
-  
-                     
-conv_dt$upper[nrow(conv_dt)]
-conv_dt$lower[nrow(conv_dt)]
-
-
-
