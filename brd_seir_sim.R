@@ -104,7 +104,7 @@ brd_seir <- function(time, state, parameters) {
 ##### simulation #####
 
 # brd sim
-Nsim <- 1000
+Nsim <- 500
 theta_vec <- c()
 # m_prop_vec <- c()
 brd_sim <- list()
