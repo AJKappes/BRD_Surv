@@ -2,13 +2,13 @@
 # theta25p_impact <- c()
 # theta75p_impact <- c()
 # for (i in 1:Nsim) {
-#   
+# 
 #   n_env <- new.env()
 #   sys.source('brd_seir_sim.R', n_env)
 #   theta25p_impact[i] <- n_env$avg_cost_25perc
 #   theta75p_impact[i] <- n_env$avg_cost_75perc
 #   cat('Impact simulation', i, 'of', Nsim, 'complete\n')
-#   
+# 
 # }
 # 
 # impact_dt <- data.table(c25 = theta25p_impact,
@@ -17,6 +17,7 @@
 # fwrite(impact_dt, 'brd_impact.csv')
 
 library(data.table)
+library(tidyverse)
 library(ggplot2)
 library(latex2exp)
 

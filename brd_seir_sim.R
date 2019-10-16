@@ -43,7 +43,7 @@ t <- seq(0, 182, 1) # representative feedlot days on feed
 
 # initialize state variables and time bounds
 
-e_init <- 53 # assume one calf exposed to BRD per pen
+e_init <- 1 # assume one calf exposed to BRD per pen
 i_init <- 0.128*Npop # 0.128 BRD incidence rate pre-feedlot introduction
 r_init <- 0
 s_init <- Npop - sum(e_init, i_init, r_init)
@@ -193,29 +193,28 @@ for (i in 1:length(brd_sim25perc)) {
 
 avg_cost_25perc <- mean(cost_vec_25perc)
 avg_cost_75perc <- mean(cost_vec_75perc)
-# impact <- avg_cost_25perc - avg_cost_75perc
-# cat(avg_cost_25perc, '-', avg_cost_75perc, '=', impact)
- 
+impact <- avg_cost_25perc - avg_cost_75perc
+
 #### epi transition plot ####
 
 # theta 25th percentile plot
 
 plot_fun <- function(ineq, sim, y) {
-  
+
   t <- seq(0, 182, 1)
-  
+
   if (ineq == 'leq') {
 
     sub <- TeX('$\\bar{\\theta}_{25^{th} percentile}$ Associated BRD Resistance Rate')
-    
+
   }
-  
+
   if (ineq == 'geq') {
 
     sub <- TeX('$\\bar{\\theta}_{\\geq 75^{th} percentile}$ Associated BRD Resistance Rate')
-    
+
   }
-  
+
   plot <- ggplot(sim, aes(t)) +
     geom_line(aes(y = y$S, colour = 'Susceptible')) +
     geom_line(aes(y = y$E, colour = 'Exposed')) +
@@ -234,9 +233,9 @@ plot_fun <- function(ineq, sim, y) {
           plot.subtitle = element_text(family = 'serif', hjust = 0.5),
           axis.title = element_text(family = 'serif'),
           legend.text = element_text(family = 'serif'))
-  
+
   return(plot)
-  
+
 }
 
 theta <- mean(theta_vec[theta_vec <= quantile(theta_vec, c(.25))])
@@ -248,3 +247,5 @@ theta <- mean(theta_vec[theta_vec >= quantile(theta_vec, c(.75))])
 sim_75th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
 y_75th <- sim_75th[, .(S, E, I, R)]
 plot_75th <- plot_fun('geq', sim_75th, y_75th)
+
+# cat('BRD cost savings impact:', impact)
