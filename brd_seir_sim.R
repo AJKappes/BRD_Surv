@@ -38,7 +38,9 @@ head_pen <- Npop / pen_size
 delta_val <- mean(c(.039, .01))
 gamma_val <- 1/61.81
 beta_val <- 0.17*0.25*head_pen
-fixed_params <- c(beta = beta_val, delta = delta_val, gamma = gamma_val)
+sigma_val <- 1/5
+fixed_params <- c(beta = beta_val, delta = delta_val, gamma = gamma_val,
+                  sigma = sigma_val)
 t <- seq(0, 182, 1) # representative feedlot days on feed
 
 # initialize state variables and time bounds
@@ -90,10 +92,16 @@ brd_seir <- function(time, state, parameters) {
   with(as.list(c(state, parameters)), {
     
     # specify differential equations
-    dsdt <- -beta*S*I
-    dedt <- beta*S*I - (1-theta)*E - theta*E
-    didt <- (1-theta)*E - gamma*I - delta*I
-    drdt <- gamma*I + theta*E
+    
+    # dsdt <- -beta*S*I
+    # dedt <- beta*S*I - (1-theta)*E - theta*E
+    # didt <- (1-theta)*E - gamma*I - delta*I
+    # drdt <- gamma*I + theta*E
+    
+    dsdt <- -beta*S*I - theta*S
+    dedt <- beta*S*I - sigma*E
+    didt <- sigma*E - gamma*I - delta*I
+    drdt <- gamma*I + theta*S
     
     list(c(dsdt, dedt, didt, drdt), theta = theta)
     
@@ -248,4 +256,6 @@ sim_75th <- data.table(ode(init_vals, t, brd_seir, fixed_params))
 y_75th <- sim_75th[, .(S, E, I, R)]
 plot_75th <- plot_fun('geq', sim_75th, y_75th)
 
-# cat('BRD cost savings impact:', impact)
+cat('BRD cost savings impact:', impact, '\n')
+cat('BRD incidence reduction from GMS technology:',
+    sim_75th[nrow(sim_75th), R] - sim_25th[nrow(sim_25th), R], '\n')
